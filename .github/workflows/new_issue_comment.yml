@@ -1,0 +1,28 @@
+name: Comment on New Issues
+on:
+  issues:
+    types: [opened, reopened]
+jobs:
+  comment:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create or update issue comment
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          issue-number: ${{ github.event.issue.number }}
+          body: |
+            <!-- DO NOT edit, this comment is for workflows!! -->
+            <!-- COMMON_COMMENT -->
+
+            <!-- STAT_PART -->
+            🎉 感谢您创建此 Issue  
+
+            我们很快会查看它. 在此期间, Dosu 可能会与您交流, 尝试解决您的问题. 它是一个 AI 维护者机器人, 旨在简化维护者工作, 您可以尝试与它沟通.  
+
+            请注意, 单个 Issue 请仅描述一个问题. 不同的问题请创建多个 Issue.  
+            <!-- STAT_PART_END -->
+
+            <!-- FOOTER_PART -->
+            *此评论是自动创建的. 我不是人类维护者.*
+            <!-- FOOTER_PART_END -->
+          edit-mode: replace
