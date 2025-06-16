@@ -19,9 +19,7 @@ jobs:
       - name: Fetch existing comment body
         if: steps.find_comment.outputs.comment-id != ''
         run: |
-          gh api \
-            repos/${{ github.repository }}/issues/comments/${{ steps.find_comment.outputs.comment-id }} \
-            --header 'Accept: application/vnd.github.v3+json' > comment.json
+          gh api repos/${{ github.repository }}/issues/comments/${{ steps.find_comment.outputs.comment-id }} --header 'Accept: application/vnd.github.v3+json' > comment.json
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -29,15 +27,8 @@ jobs:
         if: steps.find_comment.outputs.comment-id != ''
         run: |
           jq -r .body comment.json > old_body.md
-          # 使用 sed 替换 STAT_PART 块，保留其他内容
-          sed -e '/<!-- STAT_PART -->/,/<!-- STAT_PART_END -->/c\
-<!-- STAT_PART -->\
-⚠️ 此 Issue 已被关闭  \
-\
-任何新的评论可能不会被注意到, 如还未解决, 或您有新问题, 请创建另一个 Issue  \
-\
-<!-- STAT_PART_END -->' \
-            old_body.md > new_body.md
+          # 单行 awk 脚本替换 STAT_PART 块，保留其他内容
+          awk 'BEGIN{in=0}/<!-- STAT_PART -->/{print;printf "⚠️ 此 Issue 已被关闭\n\n任何新的评论可能不会被注意到, 如还未解决, 或您有新问题, 请创建另一个 Issue\n";in=1;next}/<!-- STAT_PART_END -->/{print;in=0;next}!in{print}' old_body.md > new_body.md
 
       - name: Update workflow comment
         if: steps.find_comment.outputs.comment-id != ''
