@@ -2,6 +2,8 @@ name: Update Comment on Issue Close
 on:
   issues:
     types: [closed]
+permissions:
+  issues: write
 jobs:
   find-and-update:
     runs-on: ubuntu-latest
@@ -25,7 +27,11 @@ jobs:
         if: steps.find_comment.outputs.comment-id != ''
         run: |
           jq -r .body comment.json > old_body.md
-          awk 'BEGIN {in=0} /<!-- STAT_PART -->/ {print; print "⚠️ 此 Issue 已被关闭  \n\n任何新的评论可能不会被注意到, 如还未解决, 或您有新问题, 请创建另一个 Issue  "; in=1; next} /<!-- STAT_PART_END -->/ {in=0} !in' old_body.md > new_body.md
+          awk '
+            /<!-- STAT_PART -->/ { print; print "⚠️ 此 Issue 已被关闭  \n\n任何新的评论可能不会被注意到, 如还未解决, 或您有新问题, 请创建另一个 Issue  "; in=1; next }
+            /<!-- STAT_PART_END -->/ { in=0; print; next }
+            !in { print }
+          ' old_body.md > new_body.md
 
       - name: Update workflow comment
         if: steps.find_comment.outputs.comment-id != ''
