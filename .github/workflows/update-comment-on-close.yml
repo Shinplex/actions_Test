@@ -18,6 +18,8 @@ jobs:
         if: steps.find_comment.outputs.comment-id != ''
         run: |
           gh api repos/${{ github.repository }}/issues/comments/${{ steps.find_comment.outputs.comment-id }} > comment.json
+        env:
+          GH_TOKEN: ${{ github.token }}
 
       - name: Replace STAT_PART in body
         if: steps.find_comment.outputs.comment-id != ''
