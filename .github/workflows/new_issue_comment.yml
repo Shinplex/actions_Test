@@ -2,6 +2,10 @@ name: Comment on New Issues
 on:
   issues:
     types: [opened, reopened]
+
+permissions:
+  issues: write
+
 jobs:
   comment:
     runs-on: ubuntu-latest
