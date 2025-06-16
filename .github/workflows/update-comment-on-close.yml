@@ -5,7 +5,7 @@ on:
 permissions:
   issues: write
 jobs:
-  find-and-update:
+  update-stat:
     runs-on: ubuntu-latest
     steps:
       - name: Find existing workflow comment
@@ -15,25 +15,31 @@ jobs:
           issue-number: ${{ github.event.issue.number }}
           comment-author: 'github-actions[bot]'
           body-includes: '<!-- COMMON_COMMENT -->'
-
-      - name: Fetch existing comment body
+      - name: Update STAT_PART via GitHub Script
         if: steps.find_comment.outputs.comment-id != ''
-        run: |
-          gh api repos/${{ github.repository }}/issues/comments/${{ steps.find_comment.outputs.comment-id }} --header 'Accept: application/vnd.github.v3+json' > comment.json
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Replace STAT_PART in body
-        if: steps.find_comment.outputs.comment-id != ''
-        run: |
-          jq -r .body comment.json > old_body.md
-          # 单行 awk 脚本替换 STAT_PART 块，保留其他内容
-          awk 'BEGIN{in=0}/<!-- STAT_PART -->/{print;printf "⚠️ 此 Issue 已被关闭\n\n任何新的评论可能不会被注意到, 如还未解决, 或您有新问题, 请创建另一个 Issue\n";in=1;next}/<!-- STAT_PART_END -->/{print;in=0;next}!in{print}' old_body.md > new_body.md
-
-      - name: Update workflow comment
-        if: steps.find_comment.outputs.comment-id != ''
-        uses: peter-evans/create-or-update-comment@v4
+        uses: actions/github-script@v6
         with:
-          comment-id: ${{ steps.find_comment.outputs.comment-id }}
-          body-path: new_body.md
-          edit-mode: replace
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const commentId = parseInt(process.env.COMMENT_ID, 10);
+            // 获取现有评论
+            const { data: comment } = await github.rest.issues.getComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: commentId
+            });
+            const oldBody = comment.body;
+            // 替换 STAT_PART
+            const newBody = oldBody.replace(
+              /<!-- STAT_PART -->[\s\S]*?<!-- STAT_PART_END -->/,
+              '<!-- STAT_PART -->\n⚠️ 此 Issue 已被关闭\n\n任何新的评论可能不会被注意到, 如还未解决, 或您有新问题, 请创建另一个 Issue\n<!-- STAT_PART_END -->'
+            );
+            // 更新评论
+            await github.rest.issues.updateComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: commentId,
+              body: newBody
+            });
+        env:
+          COMMENT_ID: ${{ steps.find_comment.outputs.comment-id }}
